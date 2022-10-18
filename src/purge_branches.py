@@ -1,4 +1,4 @@
-#!/usr/bin/env pipenv run python3
+#!/usr/bin/env
 """ Script to find stale branches and delete if they are older than 150 days 
 """
 import argparse
@@ -154,10 +154,10 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Find old github branches', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--gh-repo', help='The owner and repository name', default=os.env.get('GITHUB_REPOSITORY'))
-    parser.add_argument('--gh-token', help='Github API Token', default=os.env.get('GITHUB_TOKEN'))
+        '--gh-repo', help='The owner and repository name', default=os.getenv('GITHUB_REPOSITORY'))
+    parser.add_argument('--gh-token', help='Github API Token', default=os.getenv('GITHUB_TOKEN'))
     parser.add_argument(
-        '--slack-token', help='Slack token', default=os.env.get('SLACK_TOKEN'))
+        '--slack-token', help='Slack token', default=os.getenv('SLACK_TOKEN'))
     parser.add_argument('--verbose', help='Verbose output', action='store_true')
 
     args = parser.parse_args()

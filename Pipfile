@@ -1,0 +1,10 @@
+[[source]]
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "==2.28.1"
+pipfile = "*"
+
+[requires]
+python_version = "3.9.8"
