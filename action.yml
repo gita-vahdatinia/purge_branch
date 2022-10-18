@@ -1,0 +1,25 @@
+name: 'Delete stale branches'
+description: 'Notify authors of old branches and auto delete if no action is taken'
+outputs:
+  deleted-branches:
+    description: "List of all deleted branches"
+    value: ${{ steps.deleted-branches.outputs.deleted-branches }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' 
+    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+      shell: bash  
+    - run: ls "${{ github.action_path }}"
+      shell: bash
+    - run: pwd
+      shell: bash
+    - run: ls
+      shell: bash
+    - run: |
+        output=$(python ${{ github.action_path }}/src/purge_branches.py)
+        echo "::set-output name=deleted-branches::$output"
+      shell:  bash
+      id: deleted-branches
