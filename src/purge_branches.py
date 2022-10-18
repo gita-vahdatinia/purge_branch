@@ -1,11 +1,9 @@
-#!/usr/bin/env
 """ Script to find stale branches and delete if they are older than 150 days 
 """
 import argparse
-import json
 import logging
 import os
-import subprocess
+import sys
 import datetime
 
 import requests
@@ -85,7 +83,8 @@ def grab_all_branches(args, page = "", branches = []) -> str:
             return branches
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-
+        sys.exit(1)
+        
 def triage_branches(args, branches):
     """Triage the branches"""
     branches_to_delete = []
@@ -100,9 +99,9 @@ def triage_branches(args, branches):
             if branch['associatedPullRequests']['nodes'][0]['state'] == 'OPEN':
                 continue
         lastBranchCommit = datetime.datetime.strptime(branch['target']['committedDate'], '%Y-%m-%dT%H:%M:%SZ')
-        if lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=180):
+        if lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=100):
             branches_to_delete.append(branch)
-        elif lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=150):
+        elif lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=5):
             email = branch['target']['author']['email']
             if email not in slack_reminder:
                 slack_reminder[email] = []
@@ -168,6 +167,9 @@ def main():
     args = parse_args()
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s', level=log_level)
+    if not args.gh_repo or not args.gh_token or not args.slack_token:
+        logging.error("Missing required arguments")
+        sys.exit(1)
     all_branches = grab_all_branches(args)
 
     if all_branches:
