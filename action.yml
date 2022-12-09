@@ -6,6 +6,15 @@ outputs:
   deleted-branches:
     description: "List of all deleted branches"
     value: ${{ steps.deleted-branches.outputs.deleted-branches }}
+inputs:
+  days-to-notify:
+    description: "Number of minimum days to send slack notification"
+    required: true
+    default: "60"
+  days-to-delete:
+    description: "Number of minimum days to delete branch"
+    required: true
+    default: "75"
 runs:
   using: "composite"
   steps:
@@ -21,7 +30,7 @@ runs:
     - name: Triage branches
       working-directory: "${{ github.action_path }}"
       run: |
-        output=$(pipenv run python3 src/purge_branches.py)
+        output=$(pipenv run python3 src/purge_branches.py --delete-days inputs.days-to-delete --notify-days inputs.days-to-notify)
         echo "::set-output name=deleted-branches::$output"
       id: deleted-branches
       shell: bash

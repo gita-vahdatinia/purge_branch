@@ -1,4 +1,4 @@
-""" Script to find stale branches and delete if they are older than 150 days 
+""" Script to find stale branches and notify if delete if they are older than 150 days 
 """
 import argparse
 import logging
@@ -13,6 +13,7 @@ GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 GITHUB_API_URL = "https://api.github.com"
 REQUEST_TIMEOUT_SECONDS = 10
 
+
 def add_branch_slack_reminders(branch, slack_reminder):
     """Add branch to list of user email"""
     if branch['target']['author']['email'] not in slack_reminder:
@@ -22,18 +23,17 @@ def add_branch_slack_reminders(branch, slack_reminder):
 def delete_branches(args,branches):
     """Delete branch"""
     for branch in branches:
-        print(branch['name'])
-        # logging.info(f"Deleting branch {branch['name']}")
-        # url = GITHUB_API_URL+"repos/"+args.gh_repo+"git/refs/"+branch['name']
-        # headers = {
-        # 'Accept': 'application/vnd.github.v3+json',
-        # 'Authorization': f'Bearer {args.gh_token}',
-        # }
-        # try:
-        #     response = requests.delete(url, headers=headers)
-        #     response.raise_for_status()
-        # except requests.exceptions.HTTPError as err:
-        #     logging.error(err)
+        logging.info(f"Deleting branch {branch['name']}")
+        url = GITHUB_API_URL+"repos/"+args.gh_repo+"git/refs/"+branch['name']
+        headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': f'Bearer {args.gh_token}',
+        }
+        try:
+            response = requests.delete(url, headers=headers)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            logging.error(err)
 
 def grab_all_branches(args, page = "", branches = []) -> str:
     """Grab all branches from github"""
@@ -99,9 +99,9 @@ def triage_branches(args, branches):
             if branch['associatedPullRequests']['nodes'][0]['state'] == 'OPEN':
                 continue
         lastBranchCommit = datetime.datetime.strptime(branch['target']['committedDate'], '%Y-%m-%dT%H:%M:%SZ')
-        if lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=100):
+        if lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=args.days_delete):
             branches_to_delete.append(branch)
-        elif lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=5):
+        elif lastBranchCommit < datetime.datetime.today() - datetime.timedelta(days=args.days_slack):
             email = branch['target']['author']['email']
             if email not in slack_reminder:
                 slack_reminder[email] = []
@@ -133,11 +133,11 @@ def send_slack_message(args, slack_reminder):
                     branch_url = "https://github.com/"+args.gh_repo+"/compare/main..."
                     branches = [branch_url + branch['name'] + '\n' for branch in slack_reminder[user_email]]
                     delete_branch_msg = "git push origin --delete " + ' '.join([branch['name'] for branch in slack_reminder[user_email]])
-                    message = "Hi! The following branches are more than 150 days old:\n%s" % ''.join(branches)
+                    message = "Hi! The following branches are more than %s days old:\n%s" % (''.join(branches), args.days_slack)
                     message+="If you would like to keep the branch alive please rename the branch with the prefix `keep-alive-`.\n"
                     message+="You can do this by running\n`git push origin origin/old_name:refs/heads/keep-alive-old_name && git push origin :old_name`\n"
                     message+=f"Otherwise please run `{delete_branch_msg}` to delete the branches.\n"
-                    message+=f"If no action is taken, the {'branch' if len(branches)>1 else 'branches' } will be deleted in another 30 days."
+                    message+=f"If no action is taken, the {'branch' if len(branches)>1 else 'branches' } will be deleted in another %s days." % (args.days_delete-args.days_slack)
                     headers = {'Authorization': f'Bearer {args.slack_token}'}
                     data = {'text': message, 'channel': slack_user_id}
                     res = requests.post(
@@ -157,6 +157,10 @@ def parse_args():
     parser.add_argument('--gh-token', help='Github API Token', default=os.getenv('GITHUB_TOKEN'))
     parser.add_argument(
         '--slack-token', help='Slack token', default=os.getenv('SLACK_TOKEN'))
+    parser.add_argument(
+        '--days-delete', help='Number of days to delete')
+    parser.add_argument(
+        '--days-notify', help='Number of days to notify')
     parser.add_argument('--verbose', help='Verbose output', action='store_true')
 
     args = parser.parse_args()
