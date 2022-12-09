@@ -11,7 +11,7 @@ You can use the action from this example repository:
 name: Purge Branches
 on:
   schedule:
-    - cron: '0 * * * *' # every day
+    - cron: '0 10 * * *' # every day @ 10 AM UTC
 jobs:
   purgeBranches:
     runs-on: ubuntu-latest

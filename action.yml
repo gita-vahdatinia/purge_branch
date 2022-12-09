@@ -1,7 +1,8 @@
 name: 'Delete stale branches'
 description: 'Notify authors of old branches and auto delete if no action is taken'
-icon: 'delete'
-color: 'green'
+branding:
+  icon: 'delete'
+  color: 'green'
 outputs:
   deleted-branches:
     description: "List of all deleted branches"
